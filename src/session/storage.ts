@@ -1,0 +1,169 @@
+import { randomUUID } from 'crypto';
+import { TOOLS } from '../types.js';
+import { ValidationError } from '../errors.js';
+
+export interface ConversationTurn {
+  prompt: string;
+  response: string;
+  timestamp: Date;
+}
+
+export interface SessionData {
+  id: string;
+  createdAt: Date;
+  lastAccessedAt: Date;
+  turns: ConversationTurn[];
+  // Set only when an explicit agy conversation ID is known for this session
+  // (agy print mode does not emit IDs, so this is usually undefined and
+  // continuation relies on `agy --continue`).
+  agyConversationId?: string;
+}
+
+export interface SessionStorage {
+  createSession(): string;
+  ensureSession(sessionId: string): void;
+  getSession(sessionId: string): SessionData | undefined;
+  updateSession(sessionId: string, data: Partial<SessionData>): void;
+  deleteSession(sessionId: string): boolean;
+  listSessions(): SessionData[];
+  addTurn(sessionId: string, turn: ConversationTurn): void;
+  resetSession(sessionId: string): void;
+  setAgyConversationId(sessionId: string, conversationId: string): void;
+  getAgyConversationId(sessionId: string): string | undefined;
+}
+
+export class InMemorySessionStorage implements SessionStorage {
+  private sessions = new Map<string, SessionData>();
+  private readonly maxSessions = 100;
+  private readonly sessionTtl = 24 * 60 * 60 * 1000; // 24 hours
+  private readonly maxSessionIdLength = 256;
+  private readonly sessionIdPattern = /^[a-zA-Z0-9_-]+$/;
+
+  createSession(): string {
+    this.cleanupExpiredSessions();
+
+    const sessionId = randomUUID();
+    const now = new Date();
+
+    this.sessions.set(sessionId, {
+      id: sessionId,
+      createdAt: now,
+      lastAccessedAt: now,
+      turns: [],
+    });
+
+    this.enforceMaxSessions();
+    return sessionId;
+  }
+
+  ensureSession(sessionId: string): void {
+    this.cleanupExpiredSessions();
+
+    if (
+      !sessionId ||
+      sessionId.length > this.maxSessionIdLength ||
+      !this.sessionIdPattern.test(sessionId)
+    ) {
+      throw new ValidationError(
+        TOOLS.AGY,
+        'Session ID must be 1-256 characters and contain only letters, numbers, hyphens, and underscores'
+      );
+    }
+
+    const existing = this.sessions.get(sessionId);
+    if (existing) {
+      existing.lastAccessedAt = new Date();
+      return;
+    }
+
+    const now = new Date();
+    this.sessions.set(sessionId, {
+      id: sessionId,
+      createdAt: now,
+      lastAccessedAt: now,
+      turns: [],
+    });
+
+    this.enforceMaxSessions();
+  }
+
+  getSession(sessionId: string): SessionData | undefined {
+    const session = this.sessions.get(sessionId);
+    if (session) {
+      session.lastAccessedAt = new Date();
+    }
+    return session;
+  }
+
+  updateSession(sessionId: string, data: Partial<SessionData>): void {
+    const session = this.sessions.get(sessionId);
+    if (session) {
+      Object.assign(session, data);
+      session.lastAccessedAt = new Date();
+    }
+  }
+
+  deleteSession(sessionId: string): boolean {
+    return this.sessions.delete(sessionId);
+  }
+
+  listSessions(): SessionData[] {
+    this.cleanupExpiredSessions();
+    return Array.from(this.sessions.values()).sort(
+      (a, b) => b.lastAccessedAt.getTime() - a.lastAccessedAt.getTime()
+    );
+  }
+
+  addTurn(sessionId: string, turn: ConversationTurn): void {
+    const session = this.sessions.get(sessionId);
+    if (session) {
+      if (!Array.isArray(session.turns)) {
+        session.turns = [];
+      }
+      session.turns.push(turn);
+      session.lastAccessedAt = new Date();
+    }
+  }
+
+  resetSession(sessionId: string): void {
+    const session = this.sessions.get(sessionId);
+    if (session) {
+      session.turns = [];
+      session.agyConversationId = undefined;
+      session.lastAccessedAt = new Date();
+    }
+  }
+
+  setAgyConversationId(sessionId: string, conversationId: string): void {
+    const session = this.sessions.get(sessionId);
+    if (session) {
+      session.agyConversationId = conversationId;
+      session.lastAccessedAt = new Date();
+    }
+  }
+
+  getAgyConversationId(sessionId: string): string | undefined {
+    const session = this.sessions.get(sessionId);
+    return session?.agyConversationId;
+  }
+
+  private cleanupExpiredSessions(): void {
+    const now = Date.now();
+    for (const [sessionId, session] of this.sessions) {
+      if (now - session.lastAccessedAt.getTime() > this.sessionTtl) {
+        this.sessions.delete(sessionId);
+      }
+    }
+  }
+
+  private enforceMaxSessions(): void {
+    if (this.sessions.size <= this.maxSessions) return;
+
+    const sessions = this.listSessions();
+    const sessionsToDelete = sessions.slice(this.maxSessions);
+
+    for (const session of sessionsToDelete) {
+      this.sessions.delete(session.id);
+    }
+  }
+}
