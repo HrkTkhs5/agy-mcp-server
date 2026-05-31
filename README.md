@@ -114,7 +114,38 @@ Use agy with skipPermissions true and addDirs ["./src"] to refactor and write fi
 
 - `AGY_BIN` — path to the `agy` binary (default: `agy` on `PATH`).
 - `AGY_MCP_PRINT_TIMEOUT` — default `--print-timeout` when not set per-call (default `5m`).
+- `AGY_MCP_LOG_DIR` — enable conversation logging into this directory (see below).
+- `AGY_MCP_LOG_FILE` — enable conversation logging into this single file (overrides `AGY_MCP_LOG_DIR`).
 - `STRUCTURED_CONTENT_ENABLED` — emit `structuredContent` in results (`1`/`true`/`yes`/`on`). Off by default; `_meta` is always included for Claude Code.
+
+## Conversation logging
+
+Every `agy` tool call (the prompt Claude sent and the response `agy` returned)
+can be appended to a **Markdown transcript**. Logging is **off by default**;
+enable it by setting one of:
+
+- `AGY_MCP_LOG_DIR=/path/to/dir` → one file per day: `agy-conversations-YYYY-MM-DD.md`
+- `AGY_MCP_LOG_FILE=/path/to/file.md` → a single file (takes precedence)
+
+Set it in the `env` block of your `.mcp.json`, e.g.:
+
+```json
+{
+  "mcpServers": {
+    "agy-cli": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "github:toonPt0473/agy-mcp-server"],
+      "env": { "AGY_MCP_LOG_DIR": "/abs/path/to/project/.agy-logs" }
+    }
+  }
+}
+```
+
+Each entry records the timestamp, mode (fresh/continue/resume), sessionId,
+conversationId, duration, flags (sandbox/skipPermissions/addDirs), and the full
+prompt and response. Logging failures are reported to stderr but never break the
+tool. Add the log directory to `.gitignore` if you don't want transcripts committed.
 
 ## Development
 

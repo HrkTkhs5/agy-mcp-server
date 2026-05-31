@@ -1,6 +1,9 @@
 import { jest } from '@jest/globals';
 import { InMemorySessionStorage } from '../session/storage.js';
 import { ToolExecutionError, ValidationError } from '../errors.js';
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 
 // Native ESM requires unstable_mockModule + dynamic import (static jest.mock
 // is not hoisted under ESM).
@@ -42,6 +45,8 @@ describe('AgyToolHandler', () => {
     });
     delete process.env.AGY_BIN;
     delete process.env.AGY_MCP_PRINT_TIMEOUT;
+    delete process.env.AGY_MCP_LOG_DIR;
+    delete process.env.AGY_MCP_LOG_FILE;
     process.env.STRUCTURED_CONTENT_ENABLED = '1';
   });
 
@@ -192,6 +197,23 @@ describe('AgyToolHandler', () => {
   test('saves a turn to the session', async () => {
     await handler.execute({ prompt: 'hi', sessionId: 'work' });
     expect(storage.getSession('work')?.turns).toHaveLength(1);
+  });
+
+  test('writes a conversation log when AGY_MCP_LOG_DIR is set', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'agyhlog-'));
+    process.env.AGY_MCP_LOG_DIR = dir;
+    try {
+      await handler.execute({ prompt: 'logged prompt', sessionId: 'work' });
+      const files = readdirSync(dir);
+      expect(files).toHaveLength(1);
+      const content = readFileSync(path.join(dir, files[0]), 'utf8');
+      expect(content).toContain('logged prompt');
+      expect(content).toContain('agy reply');
+      expect(content).toContain('**session:** work');
+    } finally {
+      delete process.env.AGY_MCP_LOG_DIR;
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   test('response comes from stdout', async () => {

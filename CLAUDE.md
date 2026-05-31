@@ -40,6 +40,7 @@ MCP Client (Claude Code)
 | `src/types.ts` | Types, Zod schemas, constants |
 | `src/session/storage.ts` | In-memory session storage |
 | `src/utils/command.ts` | Process spawning with stdin piping + streaming |
+| `src/utils/logger.ts` | Markdown conversation transcript logger (env-gated) |
 | `src/errors.ts` | Error classes |
 
 ## Critical implementation details
@@ -56,6 +57,10 @@ MCP Client (Claude Code)
 - **No conversation ID in print mode.** Multi-turn continuation uses
   `agy --continue` (most-recent conversation). `--conversation <id>` is only used
   when the caller supplies an explicit `conversationId`.
+- **Conversation logging is env-gated and must never throw.** `logger.ts`
+  appends a Markdown transcript per `agy` call when `AGY_MCP_LOG_DIR` or
+  `AGY_MCP_LOG_FILE` is set (off by default). Failures are caught and logged to
+  stderr only — the tool result is unaffected.
 
 ## agy CLI reference (v1.0.3)
 

@@ -20,6 +20,13 @@ export const AGY_BIN_ENV_VAR = 'AGY_BIN' as const;
 export const DEFAULT_AGY_PRINT_TIMEOUT = '5m' as const;
 export const AGY_PRINT_TIMEOUT_ENV_VAR = 'AGY_MCP_PRINT_TIMEOUT' as const;
 
+// Conversation logging. When either is set, each `agy` tool call is appended to
+// a Markdown transcript. Disabled by default (privacy-safe).
+// - AGY_MCP_LOG_DIR:  directory; writes one file per day (agy-conversations-<date>.md)
+// - AGY_MCP_LOG_FILE: explicit single file path (overrides AGY_MCP_LOG_DIR)
+export const AGY_LOG_DIR_ENV_VAR = 'AGY_MCP_LOG_DIR' as const;
+export const AGY_LOG_FILE_ENV_VAR = 'AGY_MCP_LOG_FILE' as const;
+
 // Tool annotations for MCP 2025-11-25 spec
 export interface ToolAnnotations {
   title?: string;

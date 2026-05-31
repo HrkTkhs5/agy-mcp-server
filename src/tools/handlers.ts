@@ -21,6 +21,7 @@ import {
 } from '../session/storage.js';
 import { ToolExecutionError, ValidationError } from '../errors.js';
 import { executeCommand, executeCommandStreaming } from '../utils/command.js';
+import { appendConversationLog } from '../utils/logger.js';
 import { ZodError } from 'zod';
 import path from 'node:path';
 
@@ -130,6 +131,7 @@ export class AgyToolHandler {
 
       await context.sendProgress('Starting agy execution...', 0);
 
+      const startedAt = Date.now();
       const agyBin = resolveAgyBin();
       const useStreaming = !!context.progressToken;
 
@@ -156,6 +158,21 @@ export class AgyToolHandler {
         };
         this.sessionStorage.addTurn(sessionId, turn);
       }
+
+      // Append to the Markdown conversation transcript when logging is enabled
+      // (AGY_MCP_LOG_DIR / AGY_MCP_LOG_FILE). Never throws.
+      appendConversationLog({
+        timestamp: new Date().toISOString(),
+        prompt,
+        response,
+        mode,
+        sessionId,
+        conversationId: resumeId,
+        durationMs: Date.now() - startedAt,
+        sandbox,
+        skipPermissions,
+        addDirs: resolvedDirs,
+      });
 
       const metadata: Record<string, unknown> = {
         mode,
