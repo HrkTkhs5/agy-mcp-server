@@ -7,6 +7,7 @@ export const TOOLS = {
   HELP: 'help',
   LIST_SESSIONS: 'listSessions',
   CHANGELOG: 'changelog',
+  MODELS: 'models',
 } as const;
 
 export type ToolName = (typeof TOOLS)[keyof typeof TOOLS];
@@ -19,6 +20,11 @@ export const AGY_BIN_ENV_VAR = 'AGY_BIN' as const;
 // Default timeout for `agy -p` (print mode). agy's own default is 5m; we mirror it.
 export const DEFAULT_AGY_PRINT_TIMEOUT = '5m' as const;
 export const AGY_PRINT_TIMEOUT_ENV_VAR = 'AGY_MCP_PRINT_TIMEOUT' as const;
+
+// Optional default model (agy v1.0.5+ `--model`). When neither the per-call
+// `model` arg nor this env is set, no --model flag is passed and agy uses its
+// own configured default. Run the `models` tool (or `agy models`) for the list.
+export const AGY_DEFAULT_MODEL_ENV_VAR = 'AGY_MCP_DEFAULT_MODEL' as const;
 
 // Conversation logging. When either is set, each `agy` tool call is appended to
 // a Markdown transcript. Disabled by default (privacy-safe).
@@ -77,6 +83,13 @@ const durationPattern = /^\d+(\.\d+)?(ms|s|m|h)([0-9.]+(ms|s|m|h))*$/;
 // Zod schemas for tool arguments
 export const AgyToolSchema = z.object({
   prompt: z.string().min(1, { error: 'prompt must not be empty' }),
+  // Model for this call (agy v1.0.5+ `--model`). Pass a name exactly as shown
+  // by the `models` tool, e.g. "Claude Opus 4.6 (Thinking)". Optional — omit to
+  // use agy's default (or the AGY_MCP_DEFAULT_MODEL env).
+  model: z
+    .string()
+    .max(128, { error: 'Model name must be 128 characters or fewer' })
+    .optional(),
   sessionId: z
     .string()
     .max(256, { error: 'Session ID must be 256 characters or fewer' })
@@ -124,6 +137,8 @@ export const HelpToolSchema = z.object({});
 export const ListSessionsToolSchema = z.object({});
 
 export const ChangelogToolSchema = z.object({});
+
+export const ModelsToolSchema = z.object({});
 
 export type AgyToolArgs = z.infer<typeof AgyToolSchema>;
 export type PingToolArgs = z.infer<typeof PingToolSchema>;

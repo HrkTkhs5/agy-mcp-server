@@ -4,6 +4,7 @@ import {
   AGY_BIN_ENV_VAR,
   DEFAULT_AGY_PRINT_TIMEOUT,
   AGY_PRINT_TIMEOUT_ENV_VAR,
+  AGY_DEFAULT_MODEL_ENV_VAR,
   type ToolResult,
   type ToolHandlerContext,
   type AgyToolArgs,
@@ -13,6 +14,7 @@ import {
   HelpToolSchema,
   ListSessionsToolSchema,
   ChangelogToolSchema,
+  ModelsToolSchema,
 } from '../types.js';
 import {
   InMemorySessionStorage,
@@ -59,7 +61,12 @@ export class AgyToolHandler {
         sandbox,
         skipPermissions,
         printTimeout,
+        model,
       }: AgyToolArgs = AgyToolSchema.parse(args);
+
+      // Model: per-call arg wins, then env, else omit (agy uses its default).
+      const selectedModel =
+        model || process.env[AGY_DEFAULT_MODEL_ENV_VAR] || undefined;
 
       // Resolve session and decide how to invoke agy.
       let mode: AgyMode = 'fresh';
@@ -107,6 +114,12 @@ export class AgyToolHandler {
       const resolvedDirs = (addDirs ?? []).map((d) => path.resolve(d));
       for (const dir of resolvedDirs) {
         cmdArgs.push('--add-dir', dir);
+      }
+
+      // Model selection (agy v1.0.5+). Passed as a single argv value; spawn uses
+      // no shell on POSIX so spaces/parentheses in the name are safe.
+      if (selectedModel) {
+        cmdArgs.push('--model', selectedModel);
       }
 
       if (sandbox) {
@@ -172,10 +185,12 @@ export class AgyToolHandler {
         sandbox,
         skipPermissions,
         addDirs: resolvedDirs,
+        model: selectedModel,
       });
 
       const metadata: Record<string, unknown> = {
         mode,
+        ...(selectedModel && { model: selectedModel }),
         ...(resumeId && { conversationId: resumeId }),
         ...(sessionId && { sessionId }),
         ...(resolvedDirs.length > 0 && { addDirs: resolvedDirs }),
@@ -299,6 +314,36 @@ export class ChangelogToolHandler {
   }
 }
 
+export class ModelsToolHandler {
+  async execute(
+    args: unknown,
+    _context: ToolHandlerContext = defaultContext
+  ): Promise<ToolResult> {
+    try {
+      ModelsToolSchema.parse(args);
+      const result = await executeCommand(resolveAgyBin(), ['models']);
+      return {
+        content: [
+          {
+            type: 'text',
+            text:
+              result.stdout || result.stderr || 'No models reported by agy',
+          },
+        ],
+      };
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throw new ValidationError(TOOLS.MODELS, error.message);
+      }
+      throw new ToolExecutionError(
+        TOOLS.MODELS,
+        'Failed to list agy models',
+        error
+      );
+    }
+  }
+}
+
 export class ListSessionsToolHandler {
   constructor(private sessionStorage: SessionStorage) {}
 
@@ -353,4 +398,5 @@ export const toolHandlers = {
   [TOOLS.HELP]: new HelpToolHandler(),
   [TOOLS.LIST_SESSIONS]: new ListSessionsToolHandler(sessionStorage),
   [TOOLS.CHANGELOG]: new ChangelogToolHandler(),
+  [TOOLS.MODELS]: new ModelsToolHandler(),
 } as const;

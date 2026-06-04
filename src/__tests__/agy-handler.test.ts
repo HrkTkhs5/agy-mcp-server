@@ -47,6 +47,7 @@ describe('AgyToolHandler', () => {
     delete process.env.AGY_MCP_PRINT_TIMEOUT;
     delete process.env.AGY_MCP_LOG_DIR;
     delete process.env.AGY_MCP_LOG_FILE;
+    delete process.env.AGY_MCP_DEFAULT_MODEL;
     process.env.STRUCTURED_CONTENT_ENABLED = '1';
   });
 
@@ -61,9 +62,60 @@ describe('AgyToolHandler', () => {
     ]);
   });
 
-  test('does not pass any --model flag (agy has no model selection)', async () => {
+  test('omits --model when neither arg nor env is set', async () => {
     await handler.execute({ prompt: 'hi' });
     expect(mockedExecuteCommand.mock.calls[0][1]).not.toContain('--model');
+  });
+
+  test('passes --model with the exact name (spaces/parens preserved)', async () => {
+    await handler.execute({
+      prompt: 'hi',
+      model: 'Claude Opus 4.6 (Thinking)',
+    });
+    expect(mockedExecuteCommand.mock.calls[0][1]).toEqual([
+      '--model',
+      'Claude Opus 4.6 (Thinking)',
+      '--print-timeout',
+      '5m',
+      '-p',
+      'hi',
+    ]);
+  });
+
+  test('AGY_MCP_DEFAULT_MODEL is used when no model arg is given', async () => {
+    process.env.AGY_MCP_DEFAULT_MODEL = 'Gemini 3.5 Flash (High)';
+    await handler.execute({ prompt: 'hi' });
+    expect(mockedExecuteCommand.mock.calls[0][1]).toEqual([
+      '--model',
+      'Gemini 3.5 Flash (High)',
+      '--print-timeout',
+      '5m',
+      '-p',
+      'hi',
+    ]);
+  });
+
+  test('explicit model arg overrides the env default', async () => {
+    process.env.AGY_MCP_DEFAULT_MODEL = 'Gemini 3.5 Flash (High)';
+    await handler.execute({
+      prompt: 'hi',
+      model: 'Claude Sonnet 4.6 (Thinking)',
+    });
+    expect(mockedExecuteCommand.mock.calls[0][1]).toContain(
+      'Claude Sonnet 4.6 (Thinking)'
+    );
+    expect(mockedExecuteCommand.mock.calls[0][1]).not.toContain(
+      'Gemini 3.5 Flash (High)'
+    );
+  });
+
+  test('includes the model in metadata', async () => {
+    const result = await handler.execute({
+      prompt: 'hi',
+      model: 'Claude Opus 4.6 (Thinking)',
+    });
+    expect(result.content[0]._meta?.model).toBe('Claude Opus 4.6 (Thinking)');
+    expect(result.structuredContent?.model).toBe('Claude Opus 4.6 (Thinking)');
   });
 
   test('uses configured agy binary from AGY_BIN', async () => {

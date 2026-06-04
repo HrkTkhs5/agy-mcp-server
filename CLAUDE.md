@@ -36,7 +36,7 @@ MCP Client (Claude Code)
 | `src/index.ts` | Entry point; starts `AgyMcpServer` |
 | `src/server.ts` | MCP server, `list_tools` / `call_tool`, progress notifications |
 | `src/tools/definitions.ts` | Tool schemas + annotations |
-| `src/tools/handlers.ts` | Tool logic (agy, ping, help, listSessions, changelog) |
+| `src/tools/handlers.ts` | Tool logic (agy, models, ping, help, listSessions, changelog) |
 | `src/types.ts` | Types, Zod schemas, constants |
 | `src/session/storage.ts` | In-memory session storage |
 | `src/utils/command.ts` | Process spawning with stdin piping + streaming |
@@ -52,8 +52,11 @@ MCP Client (Claude Code)
   **always closes stdin** so `agy` never blocks waiting for input.
 - **Answer is on stdout.** `agy` print mode writes the response to stdout (exit 0).
   Handlers still fall back to stderr for robustness.
-- **No `--model` flag.** Antigravity controls the model; this server does not
-  expose model or reasoning-effort selection.
+- **Model selection (agy v1.0.5+).** `agy --model "<name>"` picks the model for
+  a call; `agy models` lists them. The `model` param maps to `--model` (arg >
+  `AGY_MCP_DEFAULT_MODEL` env > omitted). Names contain spaces/parens and are
+  safe as a single argv value (spawn uses no shell on POSIX). Unknown names are
+  not rejected — agy falls back to its default. (Older agy ≤1.0.3 had no `--model`.)
 - **No conversation ID in print mode.** Multi-turn continuation uses
   `agy --continue` (most-recent conversation). `--conversation <id>` is only used
   when the caller supplies an explicit `conversationId`.
@@ -66,6 +69,8 @@ MCP Client (Claude Code)
 
 ```
 agy -p "<prompt>"                 # print mode; prompt is the VALUE of -p (reads stdin only when -p is empty)
+agy --model "<name>"              # pick model for the session (v1.0.5+); see `agy models`
+agy models                        # list available models
 agy --continue / -c               # continue most recent conversation
 agy --conversation <id>           # resume a conversation by ID
 agy --add-dir <dir>               # add workspace dir (repeatable)
@@ -74,7 +79,7 @@ agy --dangerously-skip-permissions  # auto-approve tool use
 agy --print-timeout <dur>         # print-mode timeout (default 5m)
 ```
 
-Build the print invocation as: `[<resume/continue flags>] [--add-dir ...] [--sandbox] [--dangerously-skip-permissions] --print-timeout <dur> -p "<prompt>"`.
+Build the print invocation as: `[<resume/continue flags>] [--add-dir ...] [--model "<name>"] [--sandbox] [--dangerously-skip-permissions] --print-timeout <dur> -p "<prompt>"`.
 
 ## TypeScript / config
 

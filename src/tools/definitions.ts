@@ -12,6 +12,11 @@ export const toolDefinitions: ToolDefinition[] = [
           type: 'string',
           description: 'The coding task, question, or analysis request',
         },
+        model: {
+          type: 'string',
+          description:
+            'Model for this call (agy v1.0.5+ `--model`). Use a name exactly as listed by the `models` tool, e.g. "Claude Opus 4.6 (Thinking)" or "Gemini 3.5 Flash (High)". Optional — omit to use agy\'s default (or the AGY_MCP_DEFAULT_MODEL env).',
+        },
         sessionId: {
           type: 'string',
           description:
@@ -62,6 +67,23 @@ export const toolDefinitions: ToolDefinition[] = [
       destructiveHint: true,
       idempotentHint: false,
       openWorldHint: true,
+    },
+  },
+  {
+    name: TOOLS.MODELS,
+    description:
+      'List the models available to agy (runs `agy models`). Use a returned name as the `model` parameter of the agy tool.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+    annotations: {
+      title: 'List agy Models',
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
     },
   },
   {

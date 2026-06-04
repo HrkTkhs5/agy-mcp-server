@@ -69,7 +69,8 @@ which Claude Code picks up automatically when run from the project directory.
 
 | Tool | Description |
 |------|-------------|
-| `agy` | Run a prompt through `agy -p` (print mode) with optional session continuation, extra dirs, sandbox, and skip-permissions |
+| `agy` | Run a prompt through `agy -p` (print mode) with optional model, session continuation, extra dirs, sandbox, and skip-permissions |
+| `models` | List the models available to agy (`agy models`) |
 | `listSessions` | View active conversation sessions |
 | `ping` | Test server connection |
 | `help` | Get `agy --help` output |
@@ -80,6 +81,7 @@ which Claude Code picks up automatically when run from the project directory.
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `prompt` | string | — (required) | The task/question. Passed as the value of `agy -p`. |
+| `model` | string | — | Model for this call (`--model`). Use a name from the `models` tool, e.g. `Claude Opus 4.6 (Thinking)`. Omit to use agy's default (or `AGY_MCP_DEFAULT_MODEL`). |
 | `sessionId` | string | — | Multi-turn context. First turn = fresh conversation; later turns continue it. |
 | `resetSession` | boolean | `false` | Start a fresh conversation for this session. |
 | `conversationId` | string | — | Resume a specific agy conversation (`--conversation <id>`). |
@@ -93,10 +95,24 @@ which Claude Code picks up automatically when run from the project directory.
 
 ```
 Use agy to explain the auth flow in this repo
+Use the models tool to see which agy models are available
+Use agy with model "Claude Opus 4.6 (Thinking)" to review this design
 Use agy with sessionId "refactor" to analyze this module
 Use agy with sessionId "refactor" to now implement the change   # continues the same conversation
 Use agy with skipPermissions true and addDirs ["./src"] to refactor and write files
 ```
+
+## Selecting a model
+
+`agy` v1.0.5+ supports choosing a model. List what's available with the
+`models` tool (runs `agy models`), then pass the exact name as the `model`
+parameter of the `agy` tool — names contain spaces/parentheses and are passed
+safely as a single argument, e.g. `Claude Opus 4.6 (Thinking)` or
+`Gemini 3.5 Flash (High)`.
+
+Precedence: per-call `model` arg → `AGY_MCP_DEFAULT_MODEL` env → omitted (agy
+uses its own default). An unknown model name is not rejected — `agy` falls back
+to its default. Requires `agy` ≥ v1.0.5 (older versions have no `--model` flag).
 
 ## Session model & limitations
 
@@ -113,6 +129,7 @@ Use agy with skipPermissions true and addDirs ["./src"] to refactor and write fi
 ## Environment variables
 
 - `AGY_BIN` — path to the `agy` binary (default: `agy` on `PATH`).
+- `AGY_MCP_DEFAULT_MODEL` — default `--model` when not set per-call (default: none → agy's own default).
 - `AGY_MCP_PRINT_TIMEOUT` — default `--print-timeout` when not set per-call (default `5m`).
 - `AGY_MCP_LOG_DIR` — enable conversation logging into this directory (see below).
 - `AGY_MCP_LOG_FILE` — enable conversation logging into this single file (overrides `AGY_MCP_LOG_DIR`).

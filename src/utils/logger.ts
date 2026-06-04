@@ -8,6 +8,7 @@ export interface ConversationLogEntry {
   prompt: string;
   response: string;
   mode: string;
+  model?: string;
   sessionId?: string;
   conversationId?: string;
   durationMs: number;
@@ -50,6 +51,7 @@ function formatEntry(e: ConversationLogEntry): string {
       `- **session:** ${e.sessionId || '(none)'}  ·  **conversationId:** ${
         e.conversationId || '(none)'
       }  ·  **duration:** ${e.durationMs} ms`,
+      `- **model:** ${e.model || '(agy default)'}`,
       `- **flags:** ${flags}`,
       '',
       '### 🧑 Prompt',

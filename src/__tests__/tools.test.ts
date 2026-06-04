@@ -24,12 +24,13 @@ const {
   HelpToolHandler,
   ListSessionsToolHandler,
   ChangelogToolHandler,
+  ModelsToolHandler,
 } = await import('../tools/handlers.js');
 const { AgyMcpServer } = await import('../server.js');
 
 describe('Tool definitions', () => {
-  test('defines all five tools', () => {
-    expect(toolDefinitions).toHaveLength(5);
+  test('defines all six tools', () => {
+    expect(toolDefinitions).toHaveLength(6);
     const names = toolDefinitions.map((t) => t.name);
     expect(names).toEqual(
       expect.arrayContaining([
@@ -38,8 +39,14 @@ describe('Tool definitions', () => {
         TOOLS.HELP,
         TOOLS.LIST_SESSIONS,
         TOOLS.CHANGELOG,
+        TOOLS.MODELS,
       ])
     );
+  });
+
+  test('agy tool exposes a model parameter', () => {
+    const agy = toolDefinitions.find((t) => t.name === TOOLS.AGY);
+    expect(agy?.inputSchema.properties).toHaveProperty('model');
   });
 
   test('agy tool requires prompt and is marked destructive', () => {
@@ -74,6 +81,7 @@ describe('Tool handlers', () => {
       ListSessionsToolHandler
     );
     expect(toolHandlers[TOOLS.CHANGELOG]).toBeInstanceOf(ChangelogToolHandler);
+    expect(toolHandlers[TOOLS.MODELS]).toBeInstanceOf(ModelsToolHandler);
   });
 
   test('ping echoes the message', async () => {
