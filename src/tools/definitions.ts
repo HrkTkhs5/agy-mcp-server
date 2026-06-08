@@ -1,4 +1,9 @@
-import { TOOLS, type ToolDefinition } from '../types.js';
+import {
+  AGY_MODELS,
+  DEFAULT_AGY_MODEL,
+  TOOLS,
+  type ToolDefinition,
+} from '../types.js';
 
 export const toolDefinitions: ToolDefinition[] = [
   {
@@ -11,6 +16,11 @@ export const toolDefinitions: ToolDefinition[] = [
         prompt: {
           type: 'string',
           description: 'The coding task, question, or analysis request',
+        },
+        model: {
+          type: 'string',
+          enum: AGY_MODELS,
+          description: `Antigravity model to use for this request. Defaults to "${DEFAULT_AGY_MODEL}".`,
         },
         sessionId: {
           type: 'string',

@@ -20,6 +20,19 @@ export const AGY_BIN_ENV_VAR = 'AGY_BIN' as const;
 export const DEFAULT_AGY_PRINT_TIMEOUT = '5m' as const;
 export const AGY_PRINT_TIMEOUT_ENV_VAR = 'AGY_MCP_PRINT_TIMEOUT' as const;
 
+export const AGY_MODELS = [
+  'Gemini 3.5 Flash (Medium)',
+  'Gemini 3.5 Flash (High)',
+  'Gemini 3.5 Flash (Low)',
+  'Gemini 3.1 Pro (Low)',
+  'Gemini 3.1 Pro (High)',
+  'Claude Sonnet 4.6 (Thinking)',
+  'Claude Opus 4.6 (Thinking)',
+  'GPT-OSS 120B (Medium)',
+] as const;
+export const DEFAULT_AGY_MODEL = 'Gemini 3.5 Flash (Low)' as const;
+export const AGY_MODEL_ENV_VAR = 'AGY_MCP_DEFAULT_MODEL' as const;
+
 // Conversation logging. When either is set, each `agy` tool call is appended to
 // a Markdown transcript. Disabled by default (privacy-safe).
 // - AGY_MCP_LOG_DIR:  directory; writes one file per day (agy-conversations-<date>.md)
@@ -77,6 +90,7 @@ const durationPattern = /^\d+(\.\d+)?(ms|s|m|h)([0-9.]+(ms|s|m|h))*$/;
 // Zod schemas for tool arguments
 export const AgyToolSchema = z.object({
   prompt: z.string().min(1, { error: 'prompt must not be empty' }),
+  model: z.enum(AGY_MODELS).optional(),
   sessionId: z
     .string()
     .max(256, { error: 'Session ID must be 256 characters or fewer' })

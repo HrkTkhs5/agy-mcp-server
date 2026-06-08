@@ -2,7 +2,10 @@ type ProcessEnv = Record<string, string | undefined>;
 import { type SpawnOptionsWithoutStdio, spawn } from 'child_process';
 import { Buffer } from 'node:buffer';
 import path from 'node:path';
+import { clearTimeout, setTimeout } from 'node:timers';
 import chalk from 'chalk';
+import * as pty from 'node-pty';
+import stripAnsi from 'strip-ansi';
 import { CommandExecutionError } from '../errors.js';
 import { type CommandResult } from '../types.js';
 
@@ -33,6 +36,7 @@ export type ProgressCallback = (message: string) => void;
 export interface CommandOptions {
   envOverride?: ProcessEnv;
   cwd?: string;
+  usePty?: boolean;
   /**
    * Optional data to write to the child's stdin before closing it.
    *
@@ -45,6 +49,74 @@ export interface CommandOptions {
 
 export interface StreamingCommandOptions extends CommandOptions {
   onProgress?: ProgressCallback;
+}
+
+function stripTerminalControlSequences(value: string): string {
+  return stripAnsi(value).replace(/\r\n/g, '\n').trim();
+}
+
+function executeCommandPty(
+  file: string,
+  args: string[],
+  options: StreamingCommandOptions
+): Promise<CommandResult> {
+  return new Promise((resolve, reject) => {
+    let output = '';
+    let settled = false;
+    let quietTimer: ReturnType<typeof setTimeout> | undefined;
+    let hardTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const finish = (error?: Error) => {
+      if (settled) return;
+      settled = true;
+      if (quietTimer) clearTimeout(quietTimer);
+      if (hardTimer) clearTimeout(hardTimer);
+
+      const cleaned = stripTerminalControlSequences(output);
+      if (error && !cleaned) {
+        reject(error);
+      } else {
+        resolve({ stdout: cleaned, stderr: error?.message ?? '' });
+      }
+    };
+
+    try {
+      const child = pty.spawn(file, args, {
+        name: 'xterm-color',
+        cols: 160,
+        rows: 40,
+        cwd: options.cwd ? path.resolve(options.cwd) : process.cwd(),
+        env: {
+          ...process.env,
+          ...options.envOverride,
+        } as Record<string, string>,
+      });
+
+      child.onData((data) => {
+        if (output.length < MAX_BUFFER_SIZE) {
+          output += data.slice(0, MAX_BUFFER_SIZE - output.length);
+        }
+
+        const cleaned = stripTerminalControlSequences(output);
+        if (!cleaned) return;
+
+        options.onProgress?.(cleaned);
+        if (quietTimer) clearTimeout(quietTimer);
+        quietTimer = setTimeout(() => {
+          finish();
+          child.kill();
+        }, 2000);
+      });
+
+      child.onExit(() => finish());
+      hardTimer = setTimeout(() => {
+        finish(new Error('PTY command timed out after 10 minutes'));
+        child.kill();
+      }, 10 * 60 * 1000);
+    } catch (error) {
+      finish(error instanceof Error ? error : new Error(String(error)));
+    }
+  });
 }
 
 /**
@@ -69,6 +141,10 @@ export async function executeCommand(
   args: string[] = [],
   options?: CommandOptions
 ): Promise<CommandResult> {
+  if (options?.usePty && isWindows) {
+    return executeCommandPty(file, args, options);
+  }
+
   return new Promise((resolve, reject) => {
     const escapedArgs = isWindows ? args.map(escapeArgForWindows) : args;
 
@@ -169,6 +245,10 @@ export async function executeCommandStreaming(
   args: string[] = [],
   options: StreamingCommandOptions = {}
 ): Promise<CommandResult> {
+  if (options.usePty && isWindows) {
+    return executeCommandPty(file, args, options);
+  }
+
   return new Promise((resolve, reject) => {
     const escapedArgs = isWindows ? args.map(escapeArgForWindows) : args;
 

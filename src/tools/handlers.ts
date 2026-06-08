@@ -4,6 +4,9 @@ import {
   AGY_BIN_ENV_VAR,
   DEFAULT_AGY_PRINT_TIMEOUT,
   AGY_PRINT_TIMEOUT_ENV_VAR,
+  DEFAULT_AGY_MODEL,
+  AGY_MODEL_ENV_VAR,
+  AGY_MODELS,
   type ToolResult,
   type ToolHandlerContext,
   type AgyToolArgs,
@@ -51,6 +54,7 @@ export class AgyToolHandler {
     try {
       const {
         prompt,
+        model,
         sessionId,
         resetSession,
         conversationId,
@@ -97,6 +101,15 @@ export class AgyToolHandler {
       // value (appended last); the remaining tokens are flags whose order is
       // irrelevant to Go's flag parser.
       const cmdArgs: string[] = [];
+      const configuredModel = process.env[AGY_MODEL_ENV_VAR];
+      const resolvedModel =
+        model ||
+        (configuredModel &&
+        AGY_MODELS.includes(configuredModel as (typeof AGY_MODELS)[number])
+          ? (configuredModel as (typeof AGY_MODELS)[number])
+          : DEFAULT_AGY_MODEL);
+
+      cmdArgs.push('--model', resolvedModel);
 
       if (mode === 'resume' && resumeId) {
         cmdArgs.push('--conversation', resumeId);
@@ -137,11 +150,14 @@ export class AgyToolHandler {
 
       const result = useStreaming
         ? await executeCommandStreaming(agyBin, cmdArgs, {
+            usePty: process.platform === 'win32',
             onProgress: (message) => {
               context.sendProgress(message);
             },
           })
-        : await executeCommand(agyBin, cmdArgs);
+        : await executeCommand(agyBin, cmdArgs, {
+            usePty: process.platform === 'win32',
+          });
 
       // agy writes its answer to stdout; tolerate stderr-only for robustness.
       const response = result.stdout || result.stderr || 'No output from agy';
@@ -176,6 +192,7 @@ export class AgyToolHandler {
 
       const metadata: Record<string, unknown> = {
         mode,
+        model: resolvedModel,
         ...(resumeId && { conversationId: resumeId }),
         ...(sessionId && { sessionId }),
         ...(resolvedDirs.length > 0 && { addDirs: resolvedDirs }),
