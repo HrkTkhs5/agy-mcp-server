@@ -148,16 +148,15 @@ export class AgyToolHandler {
       const agyBin = resolveAgyBin();
       const useStreaming = !!context.progressToken;
 
+      // node-pty was removed 2026-07-23: plain spawn works for agy print mode
+      // (measured: exit 0, stdout intact) and the native dep alone was 62MB.
       const result = useStreaming
         ? await executeCommandStreaming(agyBin, cmdArgs, {
-            usePty: process.platform === 'win32',
             onProgress: (message) => {
               context.sendProgress(message);
             },
           })
-        : await executeCommand(agyBin, cmdArgs, {
-            usePty: process.platform === 'win32',
-          });
+        : await executeCommand(agyBin, cmdArgs);
 
       // agy writes its answer to stdout; tolerate stderr-only for robustness.
       const response = result.stdout || result.stderr || 'No output from agy';

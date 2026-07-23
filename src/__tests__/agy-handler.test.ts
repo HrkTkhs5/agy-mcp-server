@@ -61,9 +61,7 @@ describe('AgyToolHandler', () => {
       '5m',
       '-p',
       'What is 2+2?',
-    ], {
-      usePty: process.platform === 'win32',
-    });
+    ]);
   });
 
   test('passes the requested model', async () => {

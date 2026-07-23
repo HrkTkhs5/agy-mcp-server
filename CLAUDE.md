@@ -8,6 +8,16 @@ An **MCP (Model Context Protocol) server** that wraps Google Antigravity's `agy`
 CLI, exposing it as tools to Claude Code and other MCP clients. Sister project to
 `codex-mcp-server` (same architecture, different upstream CLI).
 
+## Deployment model (2026-07-23)
+
+- **`dist/` is committed.** Consumer PCs run `npm ci --omit=dev --ignore-scripts`
+  (runtime deps only, ~23MB) and never build. After editing `src/`, rebuild with
+  `npx tsc -p tsconfig.build.json` and commit the regenerated `dist/` together.
+- **node-pty was removed.** Plain `child_process.spawn` handles agy print mode
+  on all platforms (measured on Windows: exit 0, stdout intact). Do not
+  reintroduce pty — the native binary alone was 62MB and locks files while any
+  MCP session is alive.
+
 ## Development Commands
 
 ```bash
