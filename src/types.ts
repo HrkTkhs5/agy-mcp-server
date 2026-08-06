@@ -20,16 +20,17 @@ export const AGY_BIN_ENV_VAR = 'AGY_BIN' as const;
 export const DEFAULT_AGY_PRINT_TIMEOUT = '5m' as const;
 export const AGY_PRINT_TIMEOUT_ENV_VAR = 'AGY_MCP_PRINT_TIMEOUT' as const;
 
-export const AGY_MODELS = [
-  'Gemini 3.5 Flash (Medium)',
-  'Gemini 3.5 Flash (High)',
-  'Gemini 3.5 Flash (Low)',
-  'Gemini 3.1 Pro (Low)',
-  'Gemini 3.1 Pro (High)',
-  'Claude Sonnet 4.6 (Thinking)',
-  'Claude Opus 4.6 (Thinking)',
-  'GPT-OSS 120B (Medium)',
-] as const;
+// 【2026-08-06 撤去】ここには利用可能モデルの手書き配列があり、`z.enum()` で入力を縛っていた。
+//   **手書きの固定値は腐る。**実際に `gemini-3.6-flash-high`（`agy models` で実在を確認）を
+//   渡せない状態になっていた。この配列がこのMCPの唯一の独自ロジックで、
+//   安全弁でもフィルタでもない——**縛るだけで、上流の新モデルを殺す。**
+//
+//   モデル名の正当性は `agy` 自身が判定する（不正な名前ならCLIがエラーを返す）。
+//   ラッパー側で先回りして弾く理由が無い。**在庫の正は `agy models` の実行結果。**
+//
+//   参考: 表示名（`Gemini 3.5 Flash (High)`）とID（`gemini-3.6-flash-high`）の2形式があり、
+//   `~/.gemini/antigravity-cli/settings.json` は表示名で持っている。どちらを渡すかも `agy` に任せる。
+//   （memory/shared/designing-mechanisms.md「手で埋める欄と手書きの固定値は腐る」）
 export const DEFAULT_AGY_MODEL = 'Gemini 3.5 Flash (Low)' as const;
 export const AGY_MODEL_ENV_VAR = 'AGY_MCP_DEFAULT_MODEL' as const;
 
@@ -90,7 +91,8 @@ const durationPattern = /^\d+(\.\d+)?(ms|s|m|h)([0-9.]+(ms|s|m|h))*$/;
 // Zod schemas for tool arguments
 export const AgyToolSchema = z.object({
   prompt: z.string().min(1, { error: 'prompt must not be empty' }),
-  model: z.enum(AGY_MODELS).optional(),
+  // enum で縛らない（上を参照）。空文字だけ弾き、正当性の判定は agy に任せる。
+  model: z.string().min(1, { error: 'model must not be empty' }).optional(),
   sessionId: z
     .string()
     .max(256, { error: 'Session ID must be 256 characters or fewer' })
