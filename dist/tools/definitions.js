@@ -1,4 +1,4 @@
-import { AGY_MODELS, DEFAULT_AGY_MODEL, TOOLS, } from '../types.js';
+import { DEFAULT_AGY_MODEL, TOOLS } from '../types.js';
 export const toolDefinitions = [
     {
         name: TOOLS.AGY,
@@ -12,8 +12,9 @@ export const toolDefinitions = [
                 },
                 model: {
                     type: 'string',
-                    enum: AGY_MODELS,
-                    description: `Antigravity model to use for this request. Defaults to "${DEFAULT_AGY_MODEL}".`,
+                    // enum は置かない。手書きの一覧は上流の新モデルに必ず遅れる（2026-08-06 撤去）。
+                    description: `Antigravity model to use for this request. Defaults to "${DEFAULT_AGY_MODEL}". ` +
+                        'Run `agy models` for the authoritative list; this server does not validate the name.',
                 },
                 sessionId: {
                     type: 'string',
