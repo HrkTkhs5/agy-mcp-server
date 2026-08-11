@@ -11,7 +11,6 @@ export declare const DEFAULT_AGY_BIN: "agy";
 export declare const AGY_BIN_ENV_VAR: "AGY_BIN";
 export declare const DEFAULT_AGY_PRINT_TIMEOUT: "5m";
 export declare const AGY_PRINT_TIMEOUT_ENV_VAR: "AGY_MCP_PRINT_TIMEOUT";
-export declare const DEFAULT_AGY_MODEL: "Gemini 3.5 Flash (Low)";
 export declare const AGY_MODEL_ENV_VAR: "AGY_MCP_DEFAULT_MODEL";
 export declare const AGY_LOG_DIR_ENV_VAR: "AGY_MCP_LOG_DIR";
 export declare const AGY_LOG_FILE_ENV_VAR: "AGY_MCP_LOG_FILE";

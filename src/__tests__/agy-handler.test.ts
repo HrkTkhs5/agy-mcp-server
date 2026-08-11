@@ -55,8 +55,6 @@ describe('AgyToolHandler', () => {
     await handler.execute({ prompt: 'What is 2+2?' });
 
     expect(mockedExecuteCommand).toHaveBeenCalledWith('agy', [
-      '--model',
-      'Gemini 3.5 Flash (Low)',
       '--print-timeout',
       '5m',
       '-p',
@@ -72,6 +70,13 @@ describe('AgyToolHandler', () => {
     expect(mockedExecuteCommand.mock.calls[0][1]).toEqual(
       expect.arrayContaining(['--model', 'Gemini 3.1 Pro (High)'])
     );
+  });
+
+  // 2026-08-11: 既定のモデル名を持たない（types.ts 参照）。手書きの既定は版が上がるたびに
+  // 腐り、このMCP経由の委任だけが旧版で走る。指定が無ければ agy 自身の既定に委ねる。
+  test('omits --model entirely when neither arg nor env specifies one', async () => {
+    await handler.execute({ prompt: 'hi' });
+    expect(mockedExecuteCommand.mock.calls[0][1]).not.toContain('--model');
   });
 
   test('uses configured default model from AGY_MCP_DEFAULT_MODEL', async () => {
@@ -91,8 +96,6 @@ describe('AgyToolHandler', () => {
   test('custom printTimeout overrides default', async () => {
     await handler.execute({ prompt: 'hi', printTimeout: '90s' });
     expect(mockedExecuteCommand.mock.calls[0][1]).toEqual([
-      '--model',
-      'Gemini 3.5 Flash (Low)',
       '--print-timeout',
       '90s',
       '-p',
@@ -109,8 +112,6 @@ describe('AgyToolHandler', () => {
   test('addDirs map to repeated --add-dir with absolute paths', async () => {
     await handler.execute({ prompt: 'hi', addDirs: ['/tmp/a', '/tmp/b'] });
     expect(mockedExecuteCommand.mock.calls[0][1]).toEqual([
-      '--model',
-      'Gemini 3.5 Flash (Low)',
       '--add-dir',
       path.resolve('/tmp/a'),
       '--add-dir',
@@ -136,8 +137,6 @@ describe('AgyToolHandler', () => {
   test('explicit conversationId resumes that conversation', async () => {
     await handler.execute({ prompt: 'continue', conversationId: 'conv-123' });
     expect(mockedExecuteCommand.mock.calls[0][1]).toEqual([
-      '--model',
-      'Gemini 3.5 Flash (Low)',
       '--conversation',
       'conv-123',
       '--print-timeout',
@@ -150,8 +149,6 @@ describe('AgyToolHandler', () => {
   test('continueConversation without a session forces --continue', async () => {
     await handler.execute({ prompt: 'go on', continueConversation: true });
     expect(mockedExecuteCommand.mock.calls[0][1]).toEqual([
-      '--model',
-      'Gemini 3.5 Flash (Low)',
       '--continue',
       '--print-timeout',
       '5m',
@@ -163,8 +160,6 @@ describe('AgyToolHandler', () => {
   test('session first turn is fresh, second turn continues', async () => {
     await handler.execute({ prompt: 'turn 1', sessionId: 'work' });
     expect(mockedExecuteCommand.mock.calls[0][1]).toEqual([
-      '--model',
-      'Gemini 3.5 Flash (Low)',
       '--print-timeout',
       '5m',
       '-p',
@@ -173,8 +168,6 @@ describe('AgyToolHandler', () => {
 
     await handler.execute({ prompt: 'turn 2', sessionId: 'work' });
     expect(mockedExecuteCommand.mock.calls[1][1]).toEqual([
-      '--model',
-      'Gemini 3.5 Flash (Low)',
       '--continue',
       '--print-timeout',
       '5m',
@@ -189,8 +182,6 @@ describe('AgyToolHandler', () => {
 
     await handler.execute({ prompt: 'continue', sessionId: 'work' });
     expect(mockedExecuteCommand.mock.calls[0][1]).toEqual([
-      '--model',
-      'Gemini 3.5 Flash (Low)',
       '--conversation',
       'conv-xyz',
       '--print-timeout',
@@ -208,8 +199,6 @@ describe('AgyToolHandler', () => {
       resetSession: true,
     });
     expect(mockedExecuteCommand.mock.calls[1][1]).toEqual([
-      '--model',
-      'Gemini 3.5 Flash (Low)',
       '--print-timeout',
       '5m',
       '-p',
@@ -287,8 +276,6 @@ describe('AgyToolHandler', () => {
     expect(mockedExecuteCommandStreaming).toHaveBeenCalledTimes(1);
     expect(mockedExecuteCommand).not.toHaveBeenCalled();
     expect(mockedExecuteCommandStreaming.mock.calls[0][1]).toEqual([
-      '--model',
-      'Gemini 3.5 Flash (Low)',
       '--print-timeout',
       '5m',
       '-p',

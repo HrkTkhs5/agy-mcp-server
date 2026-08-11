@@ -4,7 +4,6 @@ import {
   AGY_BIN_ENV_VAR,
   DEFAULT_AGY_PRINT_TIMEOUT,
   AGY_PRINT_TIMEOUT_ENV_VAR,
-  DEFAULT_AGY_MODEL,
   AGY_MODEL_ENV_VAR,
   type ToolResult,
   type ToolHandlerContext,
@@ -103,10 +102,14 @@ export class AgyToolHandler {
       // 【2026-08-06】手書きの許可リストで環境変数を検証していたが、リストから撤去した。
       //   検証していたせいで、実在する新モデルを環境変数で指定しても黙って既定へ落ちていた。
       //   正当性の判定は agy 自身が行う（不正ならCLIがエラーを返す）。
+      // 【2026-08-11】既定のモデル名（'Gemini 3.5 Flash (Low)'）を撤去した。
+      //   指定が無いときは --model を渡さず、agy 自身の既定に委ねる。理由は types.ts。
       const configuredModel = process.env[AGY_MODEL_ENV_VAR];
-      const resolvedModel = model || configuredModel || DEFAULT_AGY_MODEL;
+      const resolvedModel = model || configuredModel;
 
-      cmdArgs.push('--model', resolvedModel);
+      if (resolvedModel) {
+        cmdArgs.push('--model', resolvedModel);
+      }
 
       if (mode === 'resume' && resumeId) {
         cmdArgs.push('--conversation', resumeId);

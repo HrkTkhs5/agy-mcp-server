@@ -1,4 +1,4 @@
-import { DEFAULT_AGY_MODEL, TOOLS } from '../types.js';
+import { TOOLS } from '../types.js';
 export const toolDefinitions = [
     {
         name: TOOLS.AGY,
@@ -12,8 +12,11 @@ export const toolDefinitions = [
                 },
                 model: {
                     type: 'string',
-                    // enum は置かない。手書きの一覧は上流の新モデルに必ず遅れる（2026-08-06 撤去）。
-                    description: `Antigravity model to use for this request. Defaults to "${DEFAULT_AGY_MODEL}". ` +
+                    // enum も既定値も置かない。手書きの一覧・手書きの既定は上流の新モデルに必ず遅れる
+                    // （enum は 2026-08-06、既定値は 2026-08-11 に撤去）。
+                    description: 'Antigravity model to use for this request. When omitted, agy uses its own ' +
+                        'configured default (kept at the newest available version by the host machine), ' +
+                        'so leaving this empty is the way to always get the latest. ' +
                         'Run `agy models` for the authoritative list; this server does not validate the name.',
                 },
                 sessionId: {

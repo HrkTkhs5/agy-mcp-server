@@ -25,7 +25,16 @@ export const AGY_PRINT_TIMEOUT_ENV_VAR = 'AGY_MCP_PRINT_TIMEOUT';
 //   参考: 表示名（`Gemini 3.5 Flash (High)`）とID（`gemini-3.6-flash-high`）の2形式があり、
 //   `~/.gemini/antigravity-cli/settings.json` は表示名で持っている。どちらを渡すかも `agy` に任せる。
 //   （memory/shared/designing-mechanisms.md「手で埋める欄と手書きの固定値は腐る」）
-export const DEFAULT_AGY_MODEL = 'Gemini 3.5 Flash (Low)';
+// 【2026-08-11 撤去】ここには `DEFAULT_AGY_MODEL = 'Gemini 3.5 Flash (Low)'` があり、
+//   呼び出し側がモデルを指定しない限り **必ずこの名前を `--model` で渡していた**。
+//   2026-08-06 に手書きの enum（許可リスト）を撤去したとき、この既定値だけが残った。
+//   結果、在庫に `gemini-3.6-*` が入っても、このMCP経由の委任は 3.5 の Low で走り続けた。
+//   **一覧を消しても、既定値が固定なら同じ場所で腐る。**
+//
+//   撤去後の決まり方: 呼び出し側の `model` → 環境変数 `AGY_MCP_DEFAULT_MODEL` →
+//   **どちらも無ければ `--model` を渡さない**＝`agy` 自身の既定（Antigravity の設定）に委ねる。
+//   その設定は ai-context の `tools/provision/60-model-versions.ps1` が sync ごとに
+//   在庫（`agy models`）の最新版へ合わせ続ける。**「最新はどれか」を決める場所を1つにする。**
 export const AGY_MODEL_ENV_VAR = 'AGY_MCP_DEFAULT_MODEL';
 // Conversation logging. When either is set, each `agy` tool call is appended to
 // a Markdown transcript. Disabled by default (privacy-safe).
