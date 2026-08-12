@@ -62,8 +62,22 @@ MCP Client (Claude Code)
   **always closes stdin** so `agy` never blocks waiting for input.
 - **Answer is on stdout.** `agy` print mode writes the response to stdout (exit 0).
   Handlers still fall back to stderr for robustness.
-- **No `--model` flag.** Antigravity controls the model; this server does not
-  expose model or reasoning-effort selection.
+- **`--model` IS passed, but only when asked for.** (Corrected 2026-08-12: this
+  section used to claim "No `--model` flag. Antigravity controls the model; this
+  server does not expose model or reasoning-effort selection." That was true of
+  agy v1.0.3, but `--model` has existed since at least v1.0.5 and the handler has
+  been passing it for months — the doc kept asserting the opposite while the code
+  did the reverse.) Resolution order: caller's `model` argument →
+  `AGY_MCP_DEFAULT_MODEL` → **omit `--model` entirely** so agy applies its own
+  default. Never reintroduce a hardcoded fallback here: agy still serves older
+  models, so a stale default never errors — it just answers worse, forever.
+  ai-context's `tools/provision/60-model-versions.ps1` keeps agy's own default
+  pinned to the newest inventory entry, so "which model is newest" is decided in
+  exactly one place.
+- **Reasoning effort (`--effort`) is NOT exposed by this server.** agy accepts it
+  (`low|medium|high`), but the effort tier is chosen per machine in
+  `~/.gemini/antigravity-cli/settings.json` (the display name carries it, e.g.
+  `Gemini 3.6 Flash (High)`), and ai-context pins that to `high`.
 - **No conversation ID in print mode.** Multi-turn continuation uses
   `agy --continue` (most-recent conversation). `--conversation <id>` is only used
   when the caller supplies an explicit `conversationId`.
@@ -72,7 +86,12 @@ MCP Client (Claude Code)
   `AGY_MCP_LOG_FILE` is set (off by default). Failures are caught and logged to
   stderr only — the tool result is unaffected.
 
-## agy CLI reference (v1.0.3)
+## agy CLI reference
+
+**Do not trust the list below over the binary.** It was pinned to "v1.0.3" and had
+drifted by the time anyone looked (2026-08-12: installed version was 1.1.12, and
+`--model` / `--effort` had appeared without this file noticing). Run
+`agy --help` and `agy models` before relying on any flag or model name here.
 
 ```
 agy -p "<prompt>"                 # print mode; prompt is the VALUE of -p (reads stdin only when -p is empty)
@@ -82,6 +101,8 @@ agy --add-dir <dir>               # add workspace dir (repeatable)
 agy --sandbox                     # terminal-restricted sandbox
 agy --dangerously-skip-permissions  # auto-approve tool use
 agy --print-timeout <dur>         # print-mode timeout (default 5m)
+agy --model <name>                # model for this session; `agy models` lists the live inventory
+agy --effort <low|medium|high>    # reasoning effort (this server does not expose it; see above)
 ```
 
 Build the print invocation as: `[<resume/continue flags>] [--add-dir ...] [--sandbox] [--dangerously-skip-permissions] --print-timeout <dur> -p "<prompt>"`.
