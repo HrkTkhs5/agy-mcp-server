@@ -1,4 +1,4 @@
-import { AGY_MODELS, DEFAULT_AGY_MODEL, TOOLS, } from '../types.js';
+import { TOOLS } from '../types.js';
 export const toolDefinitions = [
     {
         name: TOOLS.AGY,
@@ -12,8 +12,7 @@ export const toolDefinitions = [
                 },
                 model: {
                     type: 'string',
-                    enum: AGY_MODELS,
-                    description: `Antigravity model to use for this request. Defaults to "${DEFAULT_AGY_MODEL}".`,
+                    description: 'Antigravity model for this request, e.g. "Gemini 3.6 Flash (High)". Run `agy models` for the live inventory — no list is hardcoded here. Omit to use agy\'s own default, which is kept at the newest available version.',
                 },
                 sessionId: {
                     type: 'string',

@@ -1,4 +1,4 @@
-import { TOOLS, DEFAULT_AGY_BIN, AGY_BIN_ENV_VAR, DEFAULT_AGY_PRINT_TIMEOUT, AGY_PRINT_TIMEOUT_ENV_VAR, DEFAULT_AGY_MODEL, AGY_MODEL_ENV_VAR, AGY_MODELS, AgyToolSchema, PingToolSchema, HelpToolSchema, ListSessionsToolSchema, ChangelogToolSchema, } from '../types.js';
+import { TOOLS, DEFAULT_AGY_BIN, AGY_BIN_ENV_VAR, DEFAULT_AGY_PRINT_TIMEOUT, AGY_PRINT_TIMEOUT_ENV_VAR, AGY_MODEL_ENV_VAR, AgyToolSchema, PingToolSchema, HelpToolSchema, ListSessionsToolSchema, ChangelogToolSchema, } from '../types.js';
 import { InMemorySessionStorage, } from '../session/storage.js';
 import { ToolExecutionError, ValidationError } from '../errors.js';
 import { executeCommand, executeCommandStreaming } from '../utils/command.js';
@@ -59,13 +59,14 @@ export class AgyToolHandler {
             // value (appended last); the remaining tokens are flags whose order is
             // irrelevant to Go's flag parser.
             const cmdArgs = [];
-            const configuredModel = process.env[AGY_MODEL_ENV_VAR];
-            const resolvedModel = model ||
-                (configuredModel &&
-                    AGY_MODELS.includes(configuredModel)
-                    ? configuredModel
-                    : DEFAULT_AGY_MODEL);
-            cmdArgs.push('--model', resolvedModel);
+            // Caller argument -> env override -> nothing. When neither is set we omit
+            // `--model` so agy applies its own default, which ai-context keeps pinned
+            // to the newest inventory entry. Never substitute a hardcoded fallback here:
+            // it silently outlives the model it names (2026-08-12 root cure).
+            const resolvedModel = model || process.env[AGY_MODEL_ENV_VAR]?.trim();
+            if (resolvedModel) {
+                cmdArgs.push('--model', resolvedModel);
+            }
             if (mode === 'resume' && resumeId) {
                 cmdArgs.push('--conversation', resumeId);
             }

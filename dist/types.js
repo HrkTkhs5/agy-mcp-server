@@ -14,17 +14,14 @@ export const AGY_BIN_ENV_VAR = 'AGY_BIN';
 // Default timeout for `agy -p` (print mode). agy's own default is 5m; we mirror it.
 export const DEFAULT_AGY_PRINT_TIMEOUT = '5m';
 export const AGY_PRINT_TIMEOUT_ENV_VAR = 'AGY_MCP_PRINT_TIMEOUT';
-export const AGY_MODELS = [
-    'Gemini 3.5 Flash (Medium)',
-    'Gemini 3.5 Flash (High)',
-    'Gemini 3.5 Flash (Low)',
-    'Gemini 3.1 Pro (Low)',
-    'Gemini 3.1 Pro (High)',
-    'Claude Sonnet 4.6 (Thinking)',
-    'Claude Opus 4.6 (Thinking)',
-    'GPT-OSS 120B (Medium)',
-];
-export const DEFAULT_AGY_MODEL = 'Gemini 3.5 Flash (Low)';
+// No hardcoded model list, no default model (2026-08-12 root cure).
+// Both went stale: the allow-list rejected `Gemini 3.6 Flash (High)` while it was
+// live upstream, and the default pinned every unspecified call to a two-generation-old
+// model at the lowest reasoning tier — silently, because that model is still served.
+// Resolution order is now: caller argument -> AGY_MCP_DEFAULT_MODEL -> omit `--model`
+// entirely and let agy use its own default. That default is kept current by
+// ai-context's tools/provision/60-model-versions.ps1, so "which one is newest"
+// is decided in exactly one place. The live inventory is `agy models`.
 export const AGY_MODEL_ENV_VAR = 'AGY_MCP_DEFAULT_MODEL';
 // Conversation logging. When either is set, each `agy` tool call is appended to
 // a Markdown transcript. Disabled by default (privacy-safe).
@@ -37,7 +34,10 @@ const durationPattern = /^\d+(\.\d+)?(ms|s|m|h)([0-9.]+(ms|s|m|h))*$/;
 // Zod schemas for tool arguments
 export const AgyToolSchema = z.object({
     prompt: z.string().min(1, { error: 'prompt must not be empty' }),
-    model: z.enum(AGY_MODELS).optional(),
+    // Free-form: validated by agy itself against its live inventory, not by a
+    // list baked in here. A stale allow-list blocks new models; agy just errors
+    // on a bad name, which is the cheaper failure.
+    model: z.string().min(1, { error: 'model must not be empty' }).optional(),
     sessionId: z
         .string()
         .max(256, { error: 'Session ID must be 256 characters or fewer' })
