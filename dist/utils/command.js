@@ -41,6 +41,11 @@ export async function executeCommand(file, args = [], options) {
         console.error(chalk.blue('Executing:'), file, escapedArgs.join(' '));
         const spawnOptions = {
             shell: isWindows,
+            // Windows: suppress the console window the child would otherwise pop up.
+            // The MCP server itself runs without a console, so a console-subsystem child
+            // gets a brand new one — visible as a black window flashing on the user's screen.
+            // Output is captured through pipes, so hiding the window loses nothing.
+            windowsHide: true,
             env: options?.envOverride
                 ? { ...process.env, ...options.envOverride }
                 : process.env,
@@ -114,6 +119,8 @@ export async function executeCommandStreaming(file, args = [], options = {}) {
         console.error(chalk.blue('Executing (streaming):'), file, escapedArgs.join(' '));
         const spawnOptions = {
             shell: isWindows,
+            // Same as executeCommand above: hide the console window on Windows.
+            windowsHide: true,
             env: options.envOverride
                 ? { ...process.env, ...options.envOverride }
                 : process.env,
